@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "checkJs": false,
+    "importHelpers": true,
+    "lib": ["dom", "es2017"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "sourceMap": true,
+    "strict": true,
+    "strictFunctionTypes": false,
+    "target": "es5",
+    "outDir": "dist"
+  },
+  // "files": ["src/types/vue-shims.d.ts"],
+  // "include": ["src/server/**/*.ts"],
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
