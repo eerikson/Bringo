@@ -7,13 +7,13 @@
 
 import express from 'express';
 import { Server } from 'ws';
-import path from 'path';
-import { EVENT_TYPES } from './lib.js';
+// import path from 'path';
+import { NotificationEvent, NotificationEventType, User } from './types/base';
 // import { connect } from 'http2';
 
 const PORT = process.env.PORT || 3000;
 const INDEX = '/index.html';
-const __dirname = path.dirname(new URL(import.meta.url).pathname); // Workaround for --enable-experimental-modules
+// const __dirname = path.dirname(new URL(import.meta.url).pathname); // Workaround for --enable-experimental-modules
 
 const server = express()
   .use(express.static(__dirname + '/public')) // Serve built files from webpack (doesnt friggin work)
@@ -22,15 +22,21 @@ const server = express()
 
 interface BingoServer {
   wss: Server;
-  connectedAndRegisteredUsers: any[];
-  disconnectedRegisteredUsers: any[];
-  userCheckins: any;
+  registeredUsers: User[];
+  disconnectedRegisteredUsers: User[];
+  userCheckins: {
+    [key: string]: UserCheckin;
+  };
+}
+
+interface UserCheckin extends User {
+  lastCheckin: number;
 }
 
 class BingoServer {
   constructor() {
     this.wss = new Server({ server });
-    this.connectedAndRegisteredUsers = [];
+    this.registeredUsers = [];
     this.disconnectedRegisteredUsers = [];
     this.userCheckins = {};
     // Check to see if users are gone long enough to report MIA
@@ -46,31 +52,47 @@ class BingoServer {
         console.info(data);
       });
 
-      ws.on('message', (event: any) => {
-        const data = JSON.parse(event);
+      ws.on('message', (event: string) => {
+        const data: NotificationEvent = JSON.parse(event);
 
-        if (data.type === EVENT_TYPES.USER_JOIN) {
-          this.connectedAndRegisteredUsers.push({ username: data.username, id: data.id });
-          this.pushToAllClients({ label: `${data.username} has joined!` });
-          this.pushToAllClients({ type: EVENT_TYPES.USER_LIST_UPDATE, value: this.connectedAndRegisteredUsers });
-          console.info('New user joined:', data.username);
+        if (data.type === NotificationEventType.UserJoinAttempt) {
+          if (data.userName && data.userId) {
+            console.info(data.userName, 'has entered the chat');
+            const user: User = { username: data.userName, id: data.userId };
+            this.registeredUsers.push(user);
+
+            this.pushEventToAllClients({
+              type: NotificationEventType.UserJoined,
+              label: `${user.username} has joined!`,
+            });
+
+            this.pushEventToAllClients({
+              type: NotificationEventType.UserListUpdated,
+              users: this.registeredUsers,
+            });
+
+            console.info('New user joined:', user.username);
+          }
         }
 
-        if (data.type === EVENT_TYPES.USER_CHECKIN) {
-          // console.info('user checkin:', data);
-          this.userCheckins[data.id] = { lastCheckin: Date.now(), username: data.username };
+        if (data.type === NotificationEventType.UserCheckedIn) {
+          if (data.userId && data.userName) {
+            this.userCheckins[data.userId] = { lastCheckin: Date.now(), username: data.userName, id: data.userId };
+          }
         }
       });
     });
   }
 
-  pushToAllClients(data: any) {
+  pushEventToAllClients(event: NotificationEvent) {
     this.wss.clients.forEach((client) => {
-      client.send(JSON.stringify(data));
+      console.info('sending to clients: ', event);
+      client.send(JSON.stringify(event));
     });
   }
 
   pollForActiveUsers() {
+    // @TODO: Make this less bad.
     const checkinsAgainstTime = Object.values(this.userCheckins).map((ping: any) => {
       const deltaInMilliseconds = Date.now() - ping.lastCheckin;
       return { ...ping, now: Date.now(), delta: deltaInMilliseconds };
@@ -83,13 +105,6 @@ class BingoServer {
     this.disconnectedRegisteredUsers = miaUsers.map((userCheckin) => {
       return { username: userCheckin.username, id: userCheckin.id };
     });
-    // Send a notification about any changes here
-    // console.info('registered:', this.connectedAndRegisteredUsers);
-    // console.info('registered disconnected:', this.disconnectedRegisteredUsers);
-    // console.info(
-    //   'Difference:',
-    //   this.disconnectedRegisteredUsers.filter((x) => !this.connectedAndRegisteredUsers.includes(x)),
-    // );
 
     console.info(
       'MIA Users:',

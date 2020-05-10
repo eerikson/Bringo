@@ -1,7 +1,5 @@
 <template>
   <div :class="$style.root">
-    <h1>Hello</h1>
-    <code>Output: {{ output }}</code>
     <Users :users="users" />
     <Log :messages="logMessages" :class="$style.log" />
     <ModalTransition>
@@ -22,16 +20,16 @@ import Users from './Users.vue';
 import ModalTransition from './ModalTransition.vue';
 // @ts-ignore
 import { v4 as uuidv4 } from 'uuid';
-import { EVENT_TYPES } from '../lib';
+import { NotificationEvent, NotificationEventType, User } from '../types/base';
 
 interface Data {
   output: string;
   logMessages: string[];
   userRegistered: boolean;
-  users: any[];
-  userId: string | null;
+  users: User[] | undefined;
+  userId: string;
   socket: null | WebSocket;
-  userName: string | null;
+  userName: string;
 }
 
 export default Vue.extend({
@@ -48,8 +46,8 @@ export default Vue.extend({
       users: [],
       userRegistered: false,
       socket: null,
-      userId: null,
-      userName: null,
+      userId: '',
+      userName: '',
     };
   },
   methods: {
@@ -59,22 +57,23 @@ export default Vue.extend({
 
       this.socket.onmessage = (event) => {
         this.output = event.data;
-        const data = JSON.parse(event.data);
+        const data: NotificationEvent = JSON.parse(event.data);
         this.logMessages.push(event.data);
-        if (data.type === EVENT_TYPES.USER_LIST_UPDATE) {
-          this.users = data.value;
+
+        if (data.type === NotificationEventType.UserListUpdated) {
+          this.users = data.users;
         }
       };
     },
 
     async handleWelcomeFormSubmit($event: Event) {
       $event.preventDefault();
-      const username = (this.$refs.usernameInput as HTMLInputElement).value;
-      const id = uuidv4();
-      const dataToSend = { type: EVENT_TYPES.USER_JOIN, username, id };
-      await this.socket?.send(JSON.stringify(dataToSend));
-      this.userId = id;
-      this.userName = username;
+      const userName = (this.$refs.usernameInput as HTMLInputElement).value;
+      const userId = uuidv4();
+      const event: NotificationEvent = { type: NotificationEventType.UserJoinAttempt, userName, userId };
+      await this.socket?.send(JSON.stringify(event));
+      this.userId = userId;
+      this.userName = userName;
       this.userRegistered = true;
     },
 
@@ -82,8 +81,12 @@ export default Vue.extend({
       if (!this.userId) {
         return;
       }
-      const dataToSend = { type: EVENT_TYPES.USER_CHECKIN, id: this.userId, username: this.userName };
-      await this.socket?.send(JSON.stringify(dataToSend));
+      const event: NotificationEvent = {
+        type: NotificationEventType.UserCheckedIn,
+        userId: this.userId,
+        userName: this.userName,
+      };
+      await this.socket?.send(JSON.stringify(event));
     },
   },
   mounted() {
