@@ -1,9 +1,10 @@
 const { VueLoaderPlugin } = require('vue-loader');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const nodeExternals = require('webpack-node-externals');
 const path = require('path');
 
 const common = {
   mode: 'development',
-  // watch: true,
   resolve: {
     extensions: ['.ts', '.js'],
   },
@@ -11,7 +12,7 @@ const common = {
     rules: [
       {
         test: /\.vue$/,
-        use: 'vue-loader',
+        loader: 'vue-loader',
       },
       {
         test: /\.scss$/,
@@ -19,14 +20,20 @@ const common = {
           'vue-style-loader',
           {
             loader: 'css-loader',
-            options: { modules: true },
+            options: {
+              // modules: true,
+              importLoaders: 1,
+              modules: {
+                localIdentName: '[name]-[local]-[hash:base64:3]',
+              },
+            },
           },
+          'postcss-loader',
           'sass-loader',
         ],
       },
       {
         test: /\.ts?$/,
-        // use: 'ts-loader',
         loader: 'ts-loader',
         exclude: /node_modules/,
         options: {
@@ -48,12 +55,19 @@ const client = {
     path: path.resolve(__dirname, 'dist/public'),
     filename: 'main.js',
   },
+  plugins: [
+    new VueLoaderPlugin(),
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'index.html'),
+    }),
+  ],
 };
 
 const server = {
   ...common,
   entry: ['./src/server.ts'],
   target: 'node',
+  externals: [nodeExternals()],
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'server.js',

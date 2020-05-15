@@ -27,17 +27,20 @@ export default Vue.extend({
 </script>
 <style lang="scss" module>
 .root {
-  outline: 2px solid red;
 }
 
 .messageList {
   padding: 0;
+  margin: 0;
   list-style-type: none;
+  transition: all 0.25s ease;
 }
 
 .message {
-  border: 2px solid blue;
-  margin: 5px;
+  padding: 15px;
   border-radius: 3px;
+  background-color: #dedede;
+  color: #1d1d1d;
+  margin: 5px;
 }
 </style>

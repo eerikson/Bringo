@@ -21,9 +21,10 @@
 .content {
   // width: 500px;
   // min-height: 250px;
-  background-color: white;
+  background-color: #f23d5e;
   border-radius: 3px;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-  padding: 10px;
+  padding: 25px;
+  color: white;
 }
 </style>
