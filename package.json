@@ -26,7 +26,7 @@
     "bufferutil": "^4.0.1",
     "css-loader": "^3.4.2",
     "esm": "^3.2.25",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "sass-loader": "^8.0.2",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.0",
